@@ -48,6 +48,12 @@ girlModel.aabb = {
     max: [0.2, 0.2, 0.2],
 };
 
+// Adjust the initial position of the girl
+const transform = girlModel.getComponentOfType(Transform);
+if (transform) {
+    transform.translation = [0, 0, -18]; // Move the girl further along the Z-axis
+}
+
 // TESTING ZONE (Delete if it is not working)
 
 // Note Animation

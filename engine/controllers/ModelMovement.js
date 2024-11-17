@@ -7,12 +7,12 @@ export class ModelMovement {
         pitch = 0,
         yaw = 0,
         velocity = [0, 0, 0],
-        acceleration = 20,
-        maxSpeed = 5,
-        decay = 0.99999,
-        pointerSensitivity = 0.002,
-        moveDelay = 0.1, // Delay in seconds between moves
-        smoothness = 0.1 // Facotr for interpolation between 0 and 1
+        acceleration = 30,
+        maxSpeed = 20,
+        decay = 0.95,
+        pointerSensitivity = 0,
+        moveDelay = 0.3, // Delay in seconds between moves
+        smoothness = 0.04 // Facotr for interpolation between 0 and 1
     } = {}) {
         this.node = node;
         this.domElement = domElement;
@@ -33,6 +33,9 @@ export class ModelMovement {
 
         this.moveDelay = moveDelay; // Time delay between moves
         this.lastMoveTime = 0; // Track time of last movement
+
+        this.smoothness = smoothness;
+        this.currentX = this.allowedPositions[this.currentPositionIndex]; // Current interpolated X position
 
         this.initHandlers();
     }
@@ -60,11 +63,14 @@ export class ModelMovement {
                 this.lastMoveTime = t; // Update last move time
             }
         }
+        // Smoothly interpolate the position
+        const targetX = this.allowedPositions[this.currentPositionIndex]; // Get target position
+        this.currentX += (targetX - this.currentX) * this.smoothness; // Smooth interpolation
 
         const transform = this.node.getComponentOfType(Transform);
         if (transform) {
-            transform.translation[0] = this.allowedPositions[this.currentPositionIndex]; // Set x to the allowed position
-            transform.translation[2] = 0; // Keep z constant to restrict movement to x-axis
+            transform.translation[0] = this.currentX; // update X position smoothly
+            transform.translation[2] = -18; // Keep z constant to restrict movement to x-axis
 
             // Update rotation based on the Euler angles (keep rotation constant)
             const rotation = quat.create();
