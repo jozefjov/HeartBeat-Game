@@ -70,7 +70,7 @@ export class ModelMovement {
         const transform = this.node.getComponentOfType(Transform);
         if (transform) {
             transform.translation[0] = this.currentX; // update X position smoothly
-            transform.translation[2] = -18; // Keep z constant to restrict movement to x-axis
+           // transform.translation[2] = -18; // Keep z constant to restrict movement to x-axis
 
             // Update rotation based on the Euler angles (keep rotation constant)
             const rotation = quat.create();

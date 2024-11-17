@@ -1,5 +1,5 @@
 // IMPORTS
-import { quat, vec3, mat4} from 'glm';
+import { quat, vec3, mat4 } from './gl-matrix-module.js';
 
 import { ResizeSystem } from 'engine/systems/ResizeSystem.js';
 import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
@@ -41,18 +41,22 @@ const girlModel = loader.loadNode('Girl');
 if (!girlModel) {
     throw new Error('A girlModel in this scene is required to run this!');
 }
+
+// Adjust the initial position of the girl
+const transform = girlModel.getComponentOfType(Transform);
+if (transform) {
+    transform.translation = [0, 0, -18]; // Move the girl further along the Z-axis
+    /*const rotation = quat.create();
+    quat.rotateY(rotation, rotation, Math.PI);
+    transform.rotation = rotation;*/
+}
+
 girlModel.addComponent(new ModelMovement(girlModel, canvas));
 girlModel.isDynamic = true;
 girlModel.aabb = {
     min: [-0.2, -0.2, -0.2],
     max: [0.2, 0.2, 0.2],
 };
-
-// Adjust the initial position of the girl
-const transform = girlModel.getComponentOfType(Transform);
-if (transform) {
-    transform.translation = [0, 0, -18]; // Move the girl further along the Z-axis
-}
 
 // TESTING ZONE (Delete if it is not working)
 
