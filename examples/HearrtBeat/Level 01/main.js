@@ -11,6 +11,21 @@ import * as EasingFunctions from 'engine/animators/EasingFunctions.js';
 import { NoteManager } from '../../../engine/animators/NoteManager.js';
 import { NoteCollisionSystem } from '../../../engine/systems/NoteCollisionSystem.js';
 
+// Create score display
+let score = 0;
+const scoreDisplay = document.createElement('div');
+scoreDisplay.style.position = 'fixed';
+scoreDisplay.style.top = '20px';
+scoreDisplay.style.left = '20px';
+scoreDisplay.style.color = 'white';
+scoreDisplay.style.fontSize = '24px';
+scoreDisplay.style.fontFamily = 'Arial';
+scoreDisplay.style.fontWeight = 'bold';
+scoreDisplay.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+scoreDisplay.textContent = `Score: ${score}`;
+document.body.appendChild(scoreDisplay);
+
+// Initialize renderer and scene
 const canvas = document.querySelector('canvas');
 const renderer = new UnlitRenderer(canvas);
 await renderer.initialize();
@@ -28,6 +43,7 @@ if (!camera) {
     throw new Error('A camera is required to run this!');
 }
 
+// Setup girl model
 const girlModel = loader.loadNode('Girl');
 if (!girlModel) {
     throw new Error('A girlModel in this scene is required to run this!');
@@ -40,27 +56,28 @@ if (transform) {
     transform.translation = [0, 0, -18];
 }
 
-// Initialize note system
+// Initialize notes
 const noteManager = new NoteManager(loader);
 noteManager.initialize();
 const notesData = noteManager.getNotesData();
 console.log('Notes initialized:', notesData.length);
 
-// Initialize collision system
+// Setup collision system
 const collisionSystem = new NoteCollisionSystem(scene, girlModel);
 const collidedNotes = new Set();
 
-// Handle collisions
 collisionSystem.onCollision((girl, note) => {
     if (collidedNotes.has(note)) {
         return;
     }
     
-    console.log('COLLISION: Note hit!'); // Clear collision message
+    console.log('COLLISION: Note hit!');
     collidedNotes.add(note);
-    const position = note.getComponentOfType(Transform).translation;
-    console.log(`At position: x=${position[0]}, y=${position[1]}, z=${position[2]}`);
     note.remove();
+    
+    // Update score
+    score++;
+    scoreDisplay.textContent = `Score: ${score}`;
 });
 
 // Create note animations
