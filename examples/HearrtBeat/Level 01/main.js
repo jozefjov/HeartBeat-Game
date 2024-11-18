@@ -1,4 +1,4 @@
-import { quat, vec3, mat4} from 'glm';
+import { quat, vec3, mat4 } from 'glm';
 import { ResizeSystem } from 'engine/systems/ResizeSystem.js';
 import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
 import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
@@ -32,52 +32,39 @@ const girlModel = loader.loadNode('Girl');
 if (!girlModel) {
     throw new Error('A girlModel in this scene is required to run this!');
 }
-
-// Adjust the initial position of the girl
-const transform = girlModel.getComponentOfType(Transform);
-if (transform) {
-    transform.translation = [0, 0, -18]; // Move the girl further along the Z-axis
-    /*const rotation = quat.create();
-    quat.rotateY(rotation, rotation, Math.PI);
-    transform.rotation = rotation;*/
-}
-
 girlModel.addComponent(new ModelMovement(girlModel, canvas));
 girlModel.isDynamic = true;
-girlModel.aabb = {
-    min: [-0.2, -0.2, -0.2],
-    max: [0.2, 0.2, 0.2],
-};
 
 const transform = girlModel.getComponentOfType(Transform);
 if (transform) {
     transform.translation = [0, 0, -18];
 }
 
+// Initialize note system
 const noteManager = new NoteManager(loader);
 noteManager.initialize();
 const notesData = noteManager.getNotesData();
+console.log('Notes initialized:', notesData.length);
 
-// Track collided notes to prevent multiple collisions
+// Initialize collision system
+const collisionSystem = new NoteCollisionSystem(scene, girlModel);
 const collidedNotes = new Set();
 
-const collisionSystem = new NoteCollisionSystem(scene, girlModel);
-
+// Handle collisions
 collisionSystem.onCollision((girl, note) => {
-    // Check if we've already handled this note
     if (collidedNotes.has(note)) {
         return;
     }
     
-    console.log('Collision detected with note!');
+    console.log('COLLISION: Note hit!'); // Clear collision message
     collidedNotes.add(note);
-    
-    // Remove the note after collision
+    const position = note.getComponentOfType(Transform).translation;
+    console.log(`At position: x=${position[0]}, y=${position[1]}, z=${position[2]}`);
     note.remove();
 });
 
+// Create note animations
 const baseStartTime = performance.now() / 1000;
-
 const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition, loop}) => {
     note.isNote = true;
     
@@ -94,6 +81,8 @@ const noteAnimators = notesData.map(({ note, startTime, startPosition, endPositi
             animator.update(t, dt);
         }
     });
+
+    return animator;
 });
 
 function update(t, dt) {
