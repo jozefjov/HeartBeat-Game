@@ -1,4 +1,4 @@
-import { vec3, mat4 } from '../../../lib/glm.js';
+import { vec3, mat4 } from 'glm';
 import { getGlobalModelMatrix } from '../core/SceneUtils.js';
 import { Transform } from '../core/Transform.js';
 
@@ -7,6 +7,7 @@ class NoteCollisionSystem {
         this.scene = scene;
         this.girlModel = girlModel;
         this.collisionCallbacks = new Set();
+        this.collidedNotes = new Set(); // Track processed notes
     }
 
     onCollision(callback) {
@@ -23,13 +24,30 @@ class NoteCollisionSystem {
         const girlAABB = this.getTransformedAABB(this.girlModel);
 
         this.scene.traverse(node => {
-            if (node.isNote && node !== this.girlModel) {
+            // Only check unprocessed notes
+            if (node.isNote && !this.collidedNotes.has(node)) {
                 const noteAABB = this.getTransformedAABB(node);
-                if (this.aabbIntersection(girlAABB, noteAABB)) {
+                
+                // Add tolerance to AABB check
+                const tolerance = 0.5;
+                const expandedGirlAABB = {
+                    min: vec3.subtract(vec3.create(), girlAABB.min, [tolerance, tolerance, tolerance]),
+                    max: vec3.add(vec3.create(), girlAABB.max, [tolerance, tolerance, tolerance])
+                };
+
+                if (this.aabbIntersection(expandedGirlAABB, noteAABB)) {
+                    this.collidedNotes.add(node);
                     this.collisionCallbacks.forEach(callback => {
                         callback(this.girlModel, node);
                     });
                 }
+            }
+        });
+
+        // Clean up removed notes from tracking set
+        this.collidedNotes.forEach(note => {
+            if (!note.parent) {
+                this.collidedNotes.delete(note);
             }
         });
     }
@@ -47,8 +65,8 @@ class NoteCollisionSystem {
     getTransformedAABB(node) {
         if (!node.aabb) {
             node.aabb = {
-                min: [-0.5, -0.5, -0.5],
-                max: [0.5, 0.5, 0.5]
+                min: [-0.2, -0.2, -0.2],
+                max: [0.2, 0.2, 0.2]
             };
         }
 
@@ -68,10 +86,11 @@ class NoteCollisionSystem {
         const xs = vertices.map(v => v[0]);
         const ys = vertices.map(v => v[1]);
         const zs = vertices.map(v => v[2]);
-        const newmin = [Math.min(...xs), Math.min(...ys), Math.min(...zs)];
-        const newmax = [Math.max(...xs), Math.max(...ys), Math.max(...zs)];
 
-        return { min: newmin, max: newmax };
+        return {
+            min: [Math.min(...xs), Math.min(...ys), Math.min(...zs)],
+            max: [Math.max(...xs), Math.max(...ys), Math.max(...zs)]
+        };
     }
 }
 
