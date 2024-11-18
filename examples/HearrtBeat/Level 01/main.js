@@ -32,6 +32,16 @@ const girlModel = loader.loadNode('Girl');
 if (!girlModel) {
     throw new Error('A girlModel in this scene is required to run this!');
 }
+
+// Adjust the initial position of the girl
+const transform = girlModel.getComponentOfType(Transform);
+if (transform) {
+    transform.translation = [0, 0, -18]; // Move the girl further along the Z-axis
+    /*const rotation = quat.create();
+    quat.rotateY(rotation, rotation, Math.PI);
+    transform.rotation = rotation;*/
+}
+
 girlModel.addComponent(new ModelMovement(girlModel, canvas));
 girlModel.isDynamic = true;
 girlModel.aabb = {
