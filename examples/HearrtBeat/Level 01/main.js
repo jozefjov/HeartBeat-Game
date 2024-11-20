@@ -3,29 +3,15 @@ import { ResizeSystem } from 'engine/systems/ResizeSystem.js';
 import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
 import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
 import { UnlitRenderer } from 'engine/renderers/UnlitRenderer.js';
-import { Camera, Transform, Node } from 'engine/core.js';
-import { getGlobalModelMatrix } from 'engine/core/SceneUtils.js';
+import { Camera, Transform } from 'engine/core.js';
 import { LinearAnimator } from 'engine/animators/LinearAnimator.js';
 import { ModelMovement } from '../../../engine/controllers/ModelMovement.js';
-import * as EasingFunctions from 'engine/animators/EasingFunctions.js';
 import { NoteManager } from '../../../engine/animators/NoteManager.js';
 import { NoteCollisionSystem } from '../../../engine/systems/NoteCollisionSystem.js';
+import { UIManager } from './UIManager.js';
+import { GameManager } from './GameManager.js';
 
-// Create score display
-let score = 0;
-const scoreDisplay = document.createElement('div');
-scoreDisplay.style.position = 'fixed';
-scoreDisplay.style.top = '20px';
-scoreDisplay.style.left = '20px';
-scoreDisplay.style.color = 'white';
-scoreDisplay.style.fontSize = '24px';
-scoreDisplay.style.fontFamily = 'Arial';
-scoreDisplay.style.fontWeight = 'bold';
-scoreDisplay.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-scoreDisplay.textContent = `Score: ${score}`;
-document.body.appendChild(scoreDisplay);
-
-// Initialize renderer and scene
+// Initialize game systems
 const canvas = document.querySelector('canvas');
 const renderer = new UnlitRenderer(canvas);
 await renderer.initialize();
@@ -34,81 +20,64 @@ const loader = new GLTFLoader();
 await loader.load('../../../models/scene/scene.gltf');
 
 const scene = loader.loadScene(loader.defaultScene);
-if (!scene) {
-    throw new Error('A default scene is required to run this!');
-}
-
 const camera = loader.loadNode('Camera');
-if (!camera) {
-    throw new Error('A camera is required to run this!');
+const girlModel = loader.loadNode('Girl');
+
+if (!scene || !camera || !girlModel) {
+    throw new Error('Required scene elements are missing!');
 }
 
-// Setup girl model
-const girlModel = loader.loadNode('Girl');
-if (!girlModel) {
-    throw new Error('A girlModel in this scene is required to run this!');
-}
+// Setup player
 girlModel.addComponent(new ModelMovement(girlModel, canvas));
 girlModel.isDynamic = true;
+girlModel.getComponentOfType(Transform).translation = [0, 0, -18];
 
-const transform = girlModel.getComponentOfType(Transform);
-if (transform) {
-    transform.translation = [0, 0, -18];
-}
-
-// Initialize notes
+// Initialize managers
+const uiManager = new UIManager();
 const noteManager = new NoteManager(loader);
-noteManager.initialize();
-const notesData = noteManager.getNotesData();
-console.log('Notes initialized:', notesData.length);
-
-// Setup collision system
 const collisionSystem = new NoteCollisionSystem(scene, girlModel);
-const collidedNotes = new Set();
+const gameManager = new GameManager(scene, girlModel);
 
-collisionSystem.onCollision((girl, note) => {
-    if (collidedNotes.has(note)) {
-        return;
-    }
-    
-    console.log('COLLISION: Note hit!');
-    collidedNotes.add(note);
-    note.remove();
-    
-    // Update score
-    score++;
-    scoreDisplay.textContent = `Score: ${score}`;
-});
+noteManager.initialize();
+gameManager.initialize(noteManager, collisionSystem, uiManager);
 
-// Create note animations
+// Setup notes
 const baseStartTime = performance.now() / 1000;
+const notesData = noteManager.getNotesData();
+
 const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition, loop}) => {
     note.isNote = true;
     
     const animator = new LinearAnimator(note, {
-        startPosition: startPosition,
-        endPosition: endPosition,
+        startPosition,
+        endPosition,
         startTime: baseStartTime + startTime,
         duration: 5,
-        loop: loop,
+        loop,
     });
 
     note.addComponent({
         update(t, dt) {
             animator.update(t, dt);
+            const transform = note.getComponentOfType(Transform);
+            if (transform && transform.translation[2] <= endPosition[2]) {
+                gameManager.noteCompleted(note);
+            }
         }
     });
 
     return animator;
 });
 
+gameManager.setTotalNotes(noteAnimators.length);
+
+// Game loop
 function update(t, dt) {
     scene.traverse(node => {
         for (const component of node.components) {
             component.update?.(t, dt);
         }
     });
-    
     collisionSystem.update(t, dt);
 }
 
@@ -120,5 +89,6 @@ function resize({ displaySize: { width, height }}) {
     camera.getComponentOfType(Camera).aspect = width / height;
 }
 
+// Start game systems
 new ResizeSystem({ canvas, resize }).start();
 new UpdateSystem({ update, render }).start();

@@ -11,7 +11,7 @@ export class ModelMovement {
         maxSpeed = 20,
         decay = 0.95,
         pointerSensitivity = 0,
-        moveDelay = 0.3, // Delay in seconds between moves
+        moveDelay = 0.2, // Delay in seconds between moves
         smoothness = 0.04 // Facotr for interpolation between 0 and 1
     } = {}) {
         this.node = node;
