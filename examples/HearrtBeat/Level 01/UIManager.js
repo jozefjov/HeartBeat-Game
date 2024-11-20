@@ -117,13 +117,58 @@ export class UIManager {
     }
 
     showEndScreen(hitNotes, totalNotes) {
-        const finalProgress = (hitNotes / totalNotes * 100).toFixed(1);
+        const percentage = (hitNotes / totalNotes * 100).toFixed(1);
         const content = this.endScreen.firstChild;
+        const isPerfect = percentage == 100;
+        
         content.innerHTML = `
-            <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px">Game Complete!</div>
+            <style>
+                .progress-bar {
+                    background: linear-gradient(90deg, #ff8f6b, #ffd86b);
+                    background-size: 200% 100%;
+                    animation: ${isPerfect ? 'celebrate 1s ease-in-out infinite, ' : ''}
+                             gradientMove 2s linear infinite;
+                    border-radius: 20px;
+                    box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.8);
+                }
+    
+                @keyframes gradientMove {
+                    0% { background-position: 100% 0%; }
+                    100% { background-position: -100% 0%; }
+                }
+    
+                @keyframes celebrate {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                }
+    
+                .perfect-score {
+                    animation: ${isPerfect ? 'sparkle 2s linear infinite' : 'none'};
+                }
+    
+                @keyframes sparkle {
+                    0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ff8f6b, 0 0 35px #ff8f6b, 0 0 40px #ff8f6b, 0 0 50px #ff8f6b, 0 0 75px #ff8f6b; }
+                    100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ffd86b, 0 0 35px #ffd86b, 0 0 40px #ffd86b, 0 0 50px #ffd86b, 0 0 75px #ffd86b; }
+                }
+            </style>
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px" class="perfect-score">
+                ${isPerfect ? 'Flawless Performance!' : 'Game Complete!'}
+            </div>
             <div style="font-size: 20px; margin-bottom: 20px">
-                Final Score: ${finalProgress}%<br>
-                Notes Hit: ${hitNotes}/${totalNotes}
+                <div style="margin-bottom: 10px">Final Score:</div>
+                <div style="background: #ffffff; 
+                           border-radius: 20px; 
+                           height: 30px; 
+                           width: 100%; 
+                           overflow: hidden;
+                           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);">
+                    <div class="progress-bar" 
+                         style="height: 100%;
+                                width: ${percentage}%;
+                                transition: width 1s ease-in-out;">
+                    </div>
+                </div>
+                <div style="margin-top: 10px">Notes Hit: ${hitNotes}/${totalNotes}</div>
             </div>
         `;
         content.appendChild(this.retryButton);
