@@ -1,5 +1,6 @@
 import { quat, vec3, mat4} from 'glm';
 import { getGlobalModelMatrix } from 'engine/core/SceneUtils.js';
+import { notesData } from './notesData.js';
 
 export class NoteManager {
     constructor(loader) {
@@ -55,49 +56,14 @@ export class NoteManager {
         this.endPositions = this.endNodes.map(node => mat4.getTranslation(vec3.create(), getGlobalModelMatrix(node)));
     }
 
-    setupNotesData() {
+    async setupNotesData() {
         let i = 0;
-        this.notesData = [
-            { note: this.notes[i++], startTime: 0, startPosition: this.startPositions[0], endPosition: this.endPositions[0] },
-            { note: this.notes[i++], startTime: 2, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 3, startPosition: this.startPositions[4], endPosition: this.endPositions[4] },
-            { note: this.notes[i++], startTime: 4, startPosition: this.startPositions[3], endPosition: this.endPositions[3] },
-            { note: this.notes[i++], startTime: 5, startPosition: this.startPositions[4], endPosition: this.endPositions[4] },
-            { note: this.notes[i++], startTime: 6, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 7, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 9, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 13, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 15, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 17, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 22, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 23, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 25, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 27, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 28, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 31, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 32, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 33, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 34, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 35, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 36, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 37, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 38, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 39, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 40, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 41, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 42, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 43, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 44, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 45, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 46, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 47, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 48, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 49, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-            { note: this.notes[i++], startTime: 50, startPosition: this.startPositions[1], endPosition: this.endPositions[1] },
-
-
-            // Add more notes as needed
-        ];
+        this.notesData = notesData.map((data) => ({
+            note: this.notes[i++],
+            startTime: data.startTime,
+            startPosition: this.startPositions[data.stringIndex],
+            endPosition: this.endPositions[data.stringIndex],
+        }));
     }
 
     // initialize everything
