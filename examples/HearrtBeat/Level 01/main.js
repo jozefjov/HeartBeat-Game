@@ -53,7 +53,7 @@ function playAudio() {
     MusicTimer = audioContext.currentTime; // Record the start time
 }
 
-await loadAudio('../../../Cage.mp3');
+await loadAudio('../../../Cage (Instrumental).mp3');
 playAudio();
 
 // Setup player
