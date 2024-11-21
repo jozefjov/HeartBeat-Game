@@ -27,6 +27,35 @@ if (!scene || !camera || !girlModel) {
     throw new Error('Required scene elements are missing!');
 }
 
+// Setup music
+let audioContext;
+let audioBuffer;
+let audioSource;
+let MusicTimer;
+
+// Loading Music
+async function loadAudio(fileUrl) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const response = await fetch(fileUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+}
+
+// Playing Music
+function playAudio() {
+    if (!audioContext || !audioBuffer) return;
+    
+    audioSource = audioContext.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.connect(audioContext.destination);
+    audioSource.start();
+
+    MusicTimer = audioContext.currentTime; // Record the start time
+}
+
+await loadAudio('../../../Cage.mp3');
+playAudio();
+
 // Setup player
 girlModel.addComponent(new ModelMovement(girlModel, canvas));
 girlModel.isDynamic = true;
@@ -42,18 +71,17 @@ noteManager.initialize();
 gameManager.initialize(noteManager, collisionSystem, uiManager);
 
 // Setup notes
-const baseStartTime = performance.now() / 1000;
 const notesData = noteManager.getNotesData();
 
-const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition, loop}) => {
+const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition}) => {
     note.isNote = true;
     
     const animator = new LinearAnimator(note, {
         startPosition,
         endPosition,
-        startTime: baseStartTime + startTime,
+        startTime: MusicTimer + startTime,
         duration: 5,
-        loop,
+        loop: false
     });
 
     note.addComponent({
