@@ -73,13 +73,14 @@ gameManager.initialize(noteManager, collisionSystem, uiManager);
 // Setup notes
 const notesData = noteManager.getNotesData();
 
-const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition}) => {
+const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition, type}) => {
     note.isNote = true;
-    
+    console.log(type);
     const animator = new LinearAnimator(note, {
         startPosition,
         endPosition,
         startTime: MusicTimer + startTime,
+        type,
         duration: 5,
         loop: false
     });

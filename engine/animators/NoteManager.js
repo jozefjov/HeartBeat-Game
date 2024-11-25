@@ -57,13 +57,26 @@ export class NoteManager {
     }
 
     async setupNotesData() {
-        let i = 0;
-        this.notesData = notesData.map((data) => ({
-            note: this.notes[i++],
-            startTime: data.startTime,
-            startPosition: this.startPositions[data.stringIndex],
-            endPosition: this.endPositions[data.stringIndex],
-        }));
+        let quarterNoteIndex = 0; // Index for Quarter_Note
+        let eighthNoteIndex = 101; // Index for Eight_Note
+        let cloudNoteIndex = 200; // Index for Cloud
+
+        this.notesData = notesData.map((data) => {
+            const note =
+                data.type === "quarter"
+                    ? this.notes[quarterNoteIndex++] // Use Quarter_Note
+                    : data.type === "eight"
+                    ? this.notes[eighthNoteIndex++] // Use Cloud
+                    : this.notes[cloudNoteIndex++]; // Use Eight_Note
+
+            return {
+                note,
+                startTime: data.startTime,
+                startPosition: this.startPositions[data.stringIndex],
+                endPosition: this.endPositions[data.stringIndex],
+                type: data.type,
+            };
+        });
     }
 
     // initialize everything
