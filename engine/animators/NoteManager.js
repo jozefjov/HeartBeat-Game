@@ -16,14 +16,20 @@ export class NoteManager {
         this.notes = [];
 
         // Load Quarter_Note
-        for (let i = 0; i <= 100; i++) {
+        for (let i = 0; i < 100; i++) {
             const name = i === 0 ? 'Quarter_Note' : `Quarter_Note.${i.toString().padStart(3, '0')}`;
             this.notes.push(this.loader.loadNode(name));
         }
 
         // Load Eigh_Note
-        for (let i = 0; i <= 100; i++) {
+        for (let i = 0; i < 100; i++) {
             const name = i === 0 ? 'Eight_Note' : `Eight_Note.${i.toString().padStart(3, '0')}`;
+            this.notes.push(this.loader.loadNode(name));
+        }
+
+        // Load Cloud
+        for (let i = 0; i < 100; i++) {
+            const name = i === 0 ? 'Cloud' : `Cloud.${i.toString().padStart(3, '0')}`;
             this.notes.push(this.loader.loadNode(name));
         }
 
@@ -58,7 +64,7 @@ export class NoteManager {
 
     async setupNotesData() {
         let quarterNoteIndex = 0; // Index for Quarter_Note
-        let eighthNoteIndex = 101; // Index for Eight_Note
+        let eighthNoteIndex = 100; // Index for Eight_Note
         let cloudNoteIndex = 200; // Index for Cloud
 
         this.notesData = notesData.map((data) => {

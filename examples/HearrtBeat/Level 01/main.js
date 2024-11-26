@@ -74,8 +74,10 @@ gameManager.initialize(noteManager, collisionSystem, uiManager);
 const notesData = noteManager.getNotesData();
 
 const noteAnimators = notesData.map(({ note, startTime, startPosition, endPosition, type}) => {
-    note.isNote = true;
-    console.log(type);
+    if (type === "cloud") note.isNote = false;
+    else {
+        note.isNote = true;
+    }
     const animator = new LinearAnimator(note, {
         startPosition,
         endPosition,
