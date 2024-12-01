@@ -8,10 +8,15 @@ class NoteCollisionSystem {
         this.girlModel = girlModel;
         this.collisionCallbacks = new Set();
         this.trackWidth = 0.8;
+        this.score = 0;
     }
 
     onCollision(callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function');
+        }
         this.collisionCallbacks.add(callback);
+        return this;
     }
 
     removeCollisionCallback(callback) {
@@ -25,23 +30,42 @@ class NoteCollisionSystem {
         const girlTrack = Math.round(girlPosition[0] / this.trackWidth);
 
         this.scene.traverse(node => {
-            if (node.isNote && node.parent) { // Check if note still exists in scene
+            if (node.isNote !== undefined && node.parent) {
                 const noteTransform = node.getComponentOfType(Transform);
                 if (!noteTransform) return;
 
                 const notePosition = noteTransform.translation;
                 const noteTrack = Math.round(notePosition[0] / this.trackWidth);
                 
-                if (noteTrack === girlTrack && 
-                    Math.abs(notePosition[2] - girlPosition[2]) < 1) {
-                    console.log('Note collision detected and removing note!');
+                // Check for collision
+                if (noteTrack === girlTrack && Math.abs(notePosition[2] - girlPosition[2]) < 1) {
+                    if (node.isNote) {
+                        this.score++;
+                        console.log('Note Hit! +1');
+                    } else {
+                        this.score = Math.max(0, this.score - 1);
+                        console.log('Cloud Hit! -1');
+                    }
+
+                    const collisionData = {
+                        node: node,
+                        isNote: node.isNote,
+                        score: this.score,
+                        position: notePosition
+                    };
+
                     this.collisionCallbacks.forEach(callback => {
-                        callback(this.girlModel, node);
+                        callback(collisionData);
                     });
-                    node.remove(); // Ensure note is removed
+
+                    node.remove();
                 }
             }
         });
+    }
+
+    reset() {
+        this.score = 0;
     }
 }
 

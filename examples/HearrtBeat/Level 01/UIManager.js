@@ -2,12 +2,15 @@ export class UIManager {
     constructor() {
         this.score = 0;
         this.highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+        this.messageQueue = [];
+        this.isShowingMessage = false;
         this.createUI();
     }
 
     createUI() {
         this.createGameUI();
         this.createEndScreen();
+        this.createMessageDisplay();
     }
 
     createGameUI() {
@@ -42,6 +45,25 @@ export class UIManager {
         this.scoreContainer.appendChild(this.highScoreDisplay);
         this.gameUI.appendChild(this.scoreContainer);
         document.body.appendChild(this.gameUI);
+    }
+
+    createMessageDisplay() {
+        this.messageDisplay = document.createElement('div');
+        this.messageDisplay.style.cssText = `
+            position: fixed;
+            top: 18%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            text-align: center;
+        `;
+        document.body.appendChild(this.messageDisplay);
     }
 
     createEndScreen() {
@@ -106,20 +128,52 @@ export class UIManager {
         document.body.appendChild(this.endScreen);
     }
 
-    updateScore(score) {
-        this.score = score;
-        if (this.score > this.highScore) {
-            this.highScore = this.score;
-            localStorage.setItem('highScore', this.highScore);
-            this.highScoreDisplay.textContent = `High Score: ${this.highScore}`;
+    showMessage(text, isGood) {
+        this.messageQueue.push({ text, isGood });
+        if (!this.isShowingMessage) {
+            this.processMessageQueue();
         }
-        this.scoreDisplay.textContent = `Score: ${this.score}`;
     }
 
-    showEndScreen(hitNotes, totalNotes) {
-        const percentage = (hitNotes / totalNotes * 100).toFixed(1);
+    processMessageQueue() {
+        if (this.messageQueue.length === 0) {
+            this.isShowingMessage = false;
+            return;
+        }
+
+        this.isShowingMessage = true;
+        const { text, isGood } = this.messageQueue.shift();
+
+        this.messageDisplay.textContent = text;
+        this.messageDisplay.style.background = isGood ? 
+            'radial-gradient(circle, #b8f4d3, #68c38e)' :
+            'radial-gradient(circle, #ffb3b3, #ff6666)';
+        this.messageDisplay.style.color = isGood ? '#2c5842' : '#800000';
+        this.messageDisplay.style.opacity = '1';
+        
+        setTimeout(() => {
+            this.messageDisplay.style.opacity = '0';
+            setTimeout(() => {
+                this.processMessageQueue();
+            }, 200); // Wait for fade out
+        }, 300); // Show message duration
+    }
+
+    updateScore(score) {
+        this.score = score;
+        this.scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    updateHighScore(newHighScore) {
+        this.highScore = newHighScore;
+        this.highScoreDisplay.textContent = `High Score: ${newHighScore}`;
+    }
+
+    showEndScreen(finalStats) {
         const content = this.endScreen.firstChild;
-        const isPerfect = percentage == 100;
+        const maxPossibleScore = finalStats.totalNotes;
+        const scorePercentage = Math.min((finalStats.score / maxPossibleScore * 100), 100).toFixed(1);
+        const isPerfect = scorePercentage == 100;
         
         content.innerHTML = `
             <style>
@@ -131,21 +185,21 @@ export class UIManager {
                     border-radius: 20px;
                     box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.8);
                 }
-    
+
                 @keyframes gradientMove {
                     0% { background-position: 100% 0%; }
                     100% { background-position: -100% 0%; }
                 }
-    
+
                 @keyframes celebrate {
                     0%, 100% { transform: scale(1); }
                     50% { transform: scale(1.05); }
                 }
-    
+
                 .perfect-score {
                     animation: ${isPerfect ? 'sparkle 2s linear infinite' : 'none'};
                 }
-    
+
                 @keyframes sparkle {
                     0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ff8f6b, 0 0 35px #ff8f6b, 0 0 40px #ff8f6b, 0 0 50px #ff8f6b, 0 0 75px #ff8f6b; }
                     100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ffd86b, 0 0 35px #ffd86b, 0 0 40px #ffd86b, 0 0 50px #ffd86b, 0 0 75px #ffd86b; }
@@ -155,20 +209,20 @@ export class UIManager {
                 ${isPerfect ? 'Flawless Performance!' : 'Game Complete!'}
             </div>
             <div style="font-size: 20px; margin-bottom: 20px">
-                <div style="margin-bottom: 10px">Final Score:</div>
+                <div style="margin-bottom: 10px">Final Score: ${finalStats.score}/${maxPossibleScore}</div>
                 <div style="background: #ffffff; 
-                           border-radius: 20px; 
-                           height: 30px; 
-                           width: 100%; 
-                           overflow: hidden;
-                           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);">
+                          border-radius: 20px; 
+                          height: 30px; 
+                          width: 100%; 
+                          overflow: hidden;
+                          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);">
                     <div class="progress-bar" 
                          style="height: 100%;
-                                width: ${percentage}%;
+                                width: ${scorePercentage}%;
                                 transition: width 1s ease-in-out;">
                     </div>
                 </div>
-                <div style="margin-top: 10px">Notes Hit: ${hitNotes}/${totalNotes}</div>
+                <div style="margin-top: 10px">${scorePercentage}%</div>
             </div>
         `;
         content.appendChild(this.retryButton);
