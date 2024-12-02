@@ -12,7 +12,11 @@ export class ModelMovement {
         decay = 0.95,
         pointerSensitivity = 0,
         moveDelay = 0.2, // Delay in seconds between moves
-        smoothness = 0.04 // Facotr for interpolation between 0 and 1
+        smoothness = 0.04, // Facotr for interpolation between 0 and 1
+        isGrounded = true,
+        gravity = -0.3,
+        jumpForce = 12,
+        groundLevel = 0 //initial Y position of the character
     } = {}) {
         this.node = node;
         this.domElement = domElement;
@@ -36,6 +40,12 @@ export class ModelMovement {
 
         this.smoothness = smoothness;
         this.currentX = this.allowedPositions[this.currentPositionIndex]; // Current interpolated X position
+        
+        this.isGrounded = isGrounded;
+        this.verticalSpeed = 0; // No initial vertical velocity
+        this.gravity = gravity;
+        this.jumpForce = jumpForce;
+        this.groundLevel = groundLevel; // Y position where the character stands
 
         this.initHandlers();
     }
@@ -52,6 +62,7 @@ export class ModelMovement {
     }
 
     update(t, dt) {
+        //Horizontal movements
         // Check if enough time has passed since the last move
         if (t - this.lastMoveTime >= this.moveDelay) {
             if (this.keys['KeyA'] && this.currentPositionIndex > 0) {
@@ -61,6 +72,27 @@ export class ModelMovement {
             if (this.keys['KeyD'] && this.currentPositionIndex < this.allowedPositions.length - 1) {
                 this.currentPositionIndex += 1; // Move right
                 this.lastMoveTime = t; // Update last move time
+            }
+        }
+            //Vertical movement - jump
+        if (this.keys['KeyW'] && this.isGrounded){
+            this.verticalSpeed = this.jumpForce; // Apply upward force
+            this.isGrounded = false;  //the character is now in the air
+        }
+
+        if (!this.isGrounded){
+            this.verticalSpeed += this.gravity;
+            const transform = this.node.getComponentOfType(Transform);
+
+            if(transform){
+                transform.translation[1] += this.verticalSpeed * dt; // Update Y position
+
+                // Check if the character has landed
+                if (transform.translation[1] <= this.groundLevel) {
+                    transform.translation[1] = this.groundLevel; // Snap to ground
+                    this.verticalSpeed = 0; // Reset vertical speed
+                    this.isGrounded = true; // Allow another jump
+                }
             }
         }
         // Smoothly interpolate the position
@@ -87,5 +119,5 @@ export class ModelMovement {
     keyupHandler(e) {
         this.keys[e.code] = false;
     }
-
 }
+
