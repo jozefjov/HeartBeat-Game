@@ -3,12 +3,32 @@ import { getGlobalModelMatrix } from '../core/SceneUtils.js';
 import { Transform } from '../core/Transform.js';
 
 class NoteCollisionSystem {
-    constructor(scene, girlModel) {
+    constructor(scene, girlModel, camera) {
         this.scene = scene;
         this.girlModel = girlModel;
+        this.camera = camera;
         this.collisionCallbacks = new Set();
         this.trackWidth = 0.8;
         this.score = 0;
+    }
+
+    shakeCamera(duration = 0.5, intensity = 0.1) {
+        let elapsed = 0;
+        const originalPosition = vec3.clone(this.camera.getComponentOfType(Transform).translation);
+        const interval = 0.016;
+
+        const shakeInterval = setInterval(() => {
+            if (elapsed > duration) {
+                clearInterval(shakeInterval);
+                vec3.copy(this.camera.getComponentOfType(Transform).translation, originalPosition);
+                return;
+            }
+
+            const randomOffset = vec3.random([], intensity);
+            vec3.add(this.camera.getComponentOfType(Transform).translation, originalPosition, randomOffset);
+            elapsed += interval;
+
+        }, interval);
     }
 
     onCollision(callback) {
@@ -44,6 +64,7 @@ class NoteCollisionSystem {
                         console.log('Note Hit! +1');
                     } else {
                         this.score = Math.max(0, this.score - 1);
+                        this.shakeCamera();
                         console.log('Cloud Hit! -1');
                     }
 

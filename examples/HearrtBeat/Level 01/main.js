@@ -64,7 +64,7 @@ girlModel.getComponentOfType(Transform).translation = [0, 0, -18];
 // Initialize managers
 const uiManager = new UIManager();
 const noteManager = new NoteManager(loader);
-const collisionSystem = new NoteCollisionSystem(scene, girlModel);
+const collisionSystem = new NoteCollisionSystem(scene, girlModel, camera);
 const gameManager = new GameManager(scene, girlModel);
 
 noteManager.initialize();
