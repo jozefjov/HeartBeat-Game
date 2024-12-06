@@ -14,7 +14,7 @@ export class ModelMovement {
         moveDelay = 0.2, // Delay in seconds between moves
         smoothness = 0.04, // Facotr for interpolation between 0 and 1
         isGrounded = true,
-        gravity = -0.27,
+        gravity = -0.2,
         jumpForce = 13,
         groundLevel = 0 //initial Y position of the character
     } = {}) {

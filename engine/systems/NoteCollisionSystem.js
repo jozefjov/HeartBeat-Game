@@ -10,6 +10,11 @@ class NoteCollisionSystem {
         this.collisionCallbacks = new Set();
         this.trackWidth = 0.8;
         this.score = 0;
+        
+        // Define collision thresholds
+        this.horizontalThreshold = 1.5; // Horizontal distance for collision
+        this.verticalThreshold = 0.5; // Vertical distance for collision
+        this.cloudHeight = 0.8; // Height of the cloud obstacle
     }
 
     shakeCamera(duration = 0.5, intensity = 0.1) {
@@ -43,11 +48,34 @@ class NoteCollisionSystem {
         this.collisionCallbacks.delete(callback);
     }
 
+    checkCollision(girlPosition, notePosition, isCloud) {
+        // Check horizontal track alignment
+        const girlTrack = Math.round(girlPosition[0] / this.trackWidth);
+        const noteTrack = Math.round(notePosition[0] / this.trackWidth);
+        const isAlignedHorizontally = girlTrack === noteTrack;
+
+        // Check Z-axis proximity
+        const isCloseOnZ = Math.abs(notePosition[2] - girlPosition[2]) < this.horizontalThreshold;
+
+        // Different vertical collision checks for clouds and notes
+        if (isCloud) {
+            // For clouds, check if the girl is jumping over it
+            const girlHeight = girlPosition[1];
+            const isJumpingOver = girlHeight > this.cloudHeight;
+            
+            // Only collide if NOT jumping over and within vertical threshold
+            return isAlignedHorizontally && isCloseOnZ && !isJumpingOver;
+        } else {
+            // For notes, simple vertical threshold check
+            const verticalDistance = Math.abs(notePosition[1] - girlPosition[1]);
+            return isAlignedHorizontally && isCloseOnZ && verticalDistance < this.verticalThreshold;
+        }
+    }
+
     update(t, dt) {
         if (!this.girlModel || !this.girlModel.isDynamic) return;
 
         const girlPosition = this.girlModel.getComponentOfType(Transform).translation;
-        const girlTrack = Math.round(girlPosition[0] / this.trackWidth);
 
         this.scene.traverse(node => {
             if (node.isNote !== undefined && node.parent) {
@@ -55,10 +83,9 @@ class NoteCollisionSystem {
                 if (!noteTransform) return;
 
                 const notePosition = noteTransform.translation;
-                const noteTrack = Math.round(notePosition[0] / this.trackWidth);
                 
-                // Check for collision
-                if (noteTrack === girlTrack && Math.abs(notePosition[2] - girlPosition[2]) < 1) {
+                // Check for collision using the new collision detection method
+                if (this.checkCollision(girlPosition, notePosition, !node.isNote)) {
                     if (node.isNote) {
                         this.score++;
                         console.log('Note Hit! +1');
