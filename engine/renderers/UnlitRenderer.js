@@ -1,4 +1,4 @@
-import { mat4 } from 'glm';
+import { vec3, mat4 } from 'glm';
 
 import * as WebGPU from '../WebGPU.js';
 
@@ -11,10 +11,12 @@ import {
     getModels,
 } from '../core/SceneUtils.js';
 
+import { Light } from '../core/Light.js';
+
 import { BaseRenderer } from './BaseRenderer.js';
 
 const vertexBufferLayout = {
-    arrayStride: 20,
+    arrayStride: 32,
     attributes: [
         {
             name: 'position',
@@ -28,6 +30,62 @@ const vertexBufferLayout = {
             offset: 12,
             format: 'float32x2',
         },
+        {
+            name: 'normal',
+            shaderLocation: 2,
+            offset: 20,
+            format: 'float32x3',
+        },
+    ],
+};
+
+const cameraBindGroupLayout = {
+    entries: [
+        {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {},
+        },
+    ],
+};
+
+const lightBindGroupLayout = {
+    entries: [
+        {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {},
+        },
+    ],
+};
+
+const modelBindGroupLayout = {
+    entries: [
+        {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: {},
+        },
+    ],
+};
+
+const materialBindGroupLayout = {
+    entries: [
+        {
+            binding: 0,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {},
+        },
+        {
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            texture: {},
+        },
+        {
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            sampler: {},
+        },
     ],
 };
 
@@ -35,23 +93,39 @@ export class UnlitRenderer extends BaseRenderer {
 
     constructor(canvas) {
         super(canvas);
+        this.perFragment = true;
     }
 
     async initialize() {
         await super.initialize();
 
-        const code = await fetch(new URL('UnlitRenderer.wgsl', import.meta.url))
-            .then(response => response.text());
-        const module = this.device.createShaderModule({ code });
+        const codePerFragment = await fetch('lambertPerFragment.wgsl').then(response => response.text());
+        const codePerVertex = await fetch('lambertPerVertex.wgsl').then(response => response.text());
 
-        this.pipeline = await this.device.createRenderPipelineAsync({
-            layout: 'auto',
+        const modulePerFragment = this.device.createShaderModule({ code: codePerFragment });
+        const modulePerVertex = this.device.createShaderModule({ code: codePerVertex });
+
+        this.cameraBindGroupLayout = this.device.createBindGroupLayout(cameraBindGroupLayout);
+        this.lightBindGroupLayout = this.device.createBindGroupLayout(lightBindGroupLayout);
+        this.modelBindGroupLayout = this.device.createBindGroupLayout(modelBindGroupLayout);
+        this.materialBindGroupLayout = this.device.createBindGroupLayout(materialBindGroupLayout);
+
+        const layout = this.device.createPipelineLayout({
+            bindGroupLayouts: [
+                this.cameraBindGroupLayout,
+                this.lightBindGroupLayout,
+                this.modelBindGroupLayout,
+                this.materialBindGroupLayout,
+            ],
+        });
+
+        this.pipelinePerFragment = await this.device.createRenderPipelineAsync({
             vertex: {
-                module,
+                module: modulePerFragment,
                 buffers: [ vertexBufferLayout ],
             },
             fragment: {
-                module,
+                module: modulePerFragment,
                 targets: [{ format: this.format }],
             },
             depthStencil: {
@@ -59,6 +133,24 @@ export class UnlitRenderer extends BaseRenderer {
                 depthWriteEnabled: true,
                 depthCompare: 'less',
             },
+            layout,
+        });
+
+        this.pipelinePerVertex = await this.device.createRenderPipelineAsync({
+            vertex: {
+                module: modulePerVertex,
+                buffers: [ vertexBufferLayout ],
+            },
+            fragment: {
+                module: modulePerVertex,
+                targets: [{ format: this.format }],
+            },
+            depthStencil: {
+                format: 'depth24plus',
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+            },
+            layout,
         });
 
         this.recreateDepthTexture();
@@ -84,7 +176,7 @@ export class UnlitRenderer extends BaseRenderer {
         });
 
         const modelBindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(1),
+            layout: this.modelBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: modelUniformBuffer } },
             ],
@@ -106,7 +198,7 @@ export class UnlitRenderer extends BaseRenderer {
         });
 
         const cameraBindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
+            layout: this.cameraBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: cameraUniformBuffer } },
             ],
@@ -114,6 +206,28 @@ export class UnlitRenderer extends BaseRenderer {
 
         const gpuObjects = { cameraUniformBuffer, cameraBindGroup };
         this.gpuObjects.set(camera, gpuObjects);
+        return gpuObjects;
+    }
+
+    prepareLight(light) {
+        if (this.gpuObjects.has(light)) {
+            return this.gpuObjects.get(light);
+        }
+
+        const lightUniformBuffer = this.device.createBuffer({
+            size: 32,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        const lightBindGroup = this.device.createBindGroup({
+            layout: this.lightBindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: lightUniformBuffer } },
+            ],
+        });
+
+        const gpuObjects = { lightUniformBuffer, lightBindGroup };
+        this.gpuObjects.set(light, gpuObjects);
         return gpuObjects;
     }
 
@@ -143,7 +257,7 @@ export class UnlitRenderer extends BaseRenderer {
         });
 
         const materialBindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(2),
+            layout: this.materialBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: materialUniformBuffer } },
                 { binding: 1, resource: baseTexture.gpuTexture.createView() },
@@ -178,7 +292,7 @@ export class UnlitRenderer extends BaseRenderer {
                 depthStoreOp: 'discard',
             },
         });
-        this.renderPass.setPipeline(this.pipeline);
+        this.renderPass.setPipeline(this.perFragment ? this.pipelinePerFragment : this.pipelinePerVertex);
 
         const cameraComponent = camera.getComponentOfType(Camera);
         const viewMatrix = getGlobalViewMatrix(camera);
@@ -187,6 +301,15 @@ export class UnlitRenderer extends BaseRenderer {
         this.device.queue.writeBuffer(cameraUniformBuffer, 0, viewMatrix);
         this.device.queue.writeBuffer(cameraUniformBuffer, 64, projectionMatrix);
         this.renderPass.setBindGroup(0, cameraBindGroup);
+
+        const light = scene.find(node => node.getComponentOfType(Light));
+        const lightComponent = light.getComponentOfType(Light);
+        const lightColor = vec3.scale(vec3.create(), lightComponent.color, 1 / 255);
+        const lightDirection = vec3.normalize(vec3.create(), lightComponent.direction);
+        const { lightUniformBuffer, lightBindGroup } = this.prepareLight(lightComponent);
+        this.device.queue.writeBuffer(lightUniformBuffer, 0, lightColor);
+        this.device.queue.writeBuffer(lightUniformBuffer, 16, lightDirection);
+        this.renderPass.setBindGroup(1, lightBindGroup);
 
         this.renderNode(scene);
 
@@ -202,7 +325,7 @@ export class UnlitRenderer extends BaseRenderer {
         const { modelUniformBuffer, modelBindGroup } = this.prepareNode(node);
         this.device.queue.writeBuffer(modelUniformBuffer, 0, modelMatrix);
         this.device.queue.writeBuffer(modelUniformBuffer, 64, normalMatrix);
-        this.renderPass.setBindGroup(1, modelBindGroup);
+        this.renderPass.setBindGroup(2, modelBindGroup);
 
         for (const model of getModels(node)) {
             this.renderModel(model);
@@ -222,7 +345,7 @@ export class UnlitRenderer extends BaseRenderer {
     renderPrimitive(primitive) {
         const { materialUniformBuffer, materialBindGroup } = this.prepareMaterial(primitive.material);
         this.device.queue.writeBuffer(materialUniformBuffer, 0, new Float32Array(primitive.material.baseFactor));
-        this.renderPass.setBindGroup(2, materialBindGroup);
+        this.renderPass.setBindGroup(3, materialBindGroup);
 
         const { vertexBuffer, indexBuffer } = this.prepareMesh(primitive.mesh, vertexBufferLayout);
         this.renderPass.setVertexBuffer(0, vertexBuffer);
