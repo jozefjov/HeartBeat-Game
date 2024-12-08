@@ -1,9 +1,7 @@
 import { vec3 } from 'glm';
-
 import { Transform } from '../core/Transform.js';
 
 export class LinearAnimator {
-
     constructor(node, {
         startPosition = [0, 0, 0],
         endPosition = [0, 0, 0],
@@ -12,14 +10,12 @@ export class LinearAnimator {
         loop = false,
     } = {}) {
         this.node = node;
-
-        this.startPosition = startPosition;
-        this.endPosition = endPosition;
-
+        this.startPosition = vec3.clone(startPosition);  // Clone to prevent reference issues
+        this.endPosition = vec3.clone(endPosition);
+        this.initialStartTime = startTime;  // Store initial start time
         this.startTime = startTime;
         this.duration = duration;
         this.loop = loop;
-
         this.playing = true;
     }
 
@@ -29,6 +25,17 @@ export class LinearAnimator {
 
     pause() {
         this.playing = false;
+    }
+
+    reset() {
+        // Reset position to start
+        const transform = this.node.getComponentOfType(Transform);
+        if (transform) {
+            vec3.copy(transform.translation, this.startPosition);
+        }
+        // Reset timing
+        this.startTime = this.initialStartTime;
+        this.playing = true;
     }
 
     update(t, dt) {
@@ -50,5 +57,4 @@ export class LinearAnimator {
 
         vec3.lerp(transform.translation, this.startPosition, this.endPosition, interpolation);
     }
-
 }

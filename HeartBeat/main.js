@@ -37,6 +37,8 @@ let audioContext;
 let audioBuffer;
 let audioSource;
 let MusicTimer;
+let isPaused = false;
+let pausedAt = 0;  // Track where we paused
 
 // Loading Music
 async function loadAudio(fileUrl) {
@@ -55,7 +57,28 @@ function playAudio() {
     audioSource.connect(audioContext.destination);
     audioSource.start();
 
-    MusicTimer = audioContext.currentTime; // Record the start time
+    MusicTimer = audioContext.currentTime;
+}
+
+// Pause Music
+function pauseAudio() {
+    if (audioSource) {
+        pausedAt = audioContext.currentTime - MusicTimer; // Store current position
+        audioSource.stop();
+    }
+}
+
+// Resume Music
+function resumeAudio() {
+    if (audioContext && audioBuffer) {
+        audioSource = audioContext.createBufferSource();
+        audioSource.buffer = audioBuffer;
+        audioSource.connect(audioContext.destination);
+        
+        // Start from where we paused
+        audioSource.start(0, pausedAt);
+        MusicTimer = audioContext.currentTime - pausedAt;
+    }
 }
 
 await loadAudio('../dreams-song.mp3');
@@ -74,6 +97,20 @@ const gameManager = new GameManager(scene, girlModel);
 
 noteManager.initialize();
 gameManager.initialize(noteManager, collisionSystem, uiManager);
+
+// Setup UI callbacks
+uiManager.setCallbacks({
+    onPause: () => {
+        isPaused = true;
+        gameManager.pauseGame();
+        pauseAudio();
+    },
+    onResume: () => {
+        isPaused = false;
+        gameManager.resumeGame();
+        resumeAudio();
+    }
+});
 
 // Setup notes
 const notesData = noteManager.getNotesData();
@@ -94,10 +131,12 @@ const noteAnimators = notesData.map(({ note, startTime, startPosition, endPositi
 
     note.addComponent({
         update(t, dt) {
-            animator.update(t, dt);
-            const transform = note.getComponentOfType(Transform);
-            if (transform && transform.translation[2] <= endPosition[2]) {
-                gameManager.noteCompleted(note);
+            if (!isPaused) {
+                animator.update(t, dt);
+                const transform = note.getComponentOfType(Transform);
+                if (transform && transform.translation[2] <= endPosition[2]) {
+                    gameManager.noteCompleted(note);
+                }
             }
         }
     });
@@ -109,12 +148,14 @@ gameManager.setTotalNotes(noteAnimators.length);
 
 // Game loop
 function update(t, dt) {
-    scene.traverse(node => {
-        for (const component of node.components) {
-            component.update?.(t, dt);
-        }
-    });
-    collisionSystem.update(t, dt);
+    if (!isPaused) {
+        scene.traverse(node => {
+            for (const component of node.components) {
+                component.update?.(t, dt);
+            }
+        });
+        collisionSystem.update(t, dt);
+    }
 }
 
 function render() {

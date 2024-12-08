@@ -4,11 +4,16 @@ export class UIManager {
         this.highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
         this.messageQueue = [];
         this.isShowingMessage = false;
+        this.isPaused = false;
+        this.onPauseCallback = null;
+        this.onResumeCallback = null;
         this.createUI();
     }
 
     createUI() {
         this.createGameUI();
+        this.createPauseButton();
+        this.createPauseScreen();
         this.createEndScreen();
         this.createMessageDisplay();
     }
@@ -45,6 +50,126 @@ export class UIManager {
         this.scoreContainer.appendChild(this.highScoreDisplay);
         this.gameUI.appendChild(this.scoreContainer);
         document.body.appendChild(this.gameUI);
+    }
+
+    createPauseButton() {
+        this.pauseButton = document.createElement('button');
+        this.pauseButton.textContent = '❚❚';
+        this.pauseButton.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: radial-gradient(circle, #ffffff, #fce9b5);
+            border: none;
+            color: #947684;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0px 0px 20px #f8fdea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        this.pauseButton.onmouseover = () => {
+            this.pauseButton.style.boxShadow = '0px 0px 30px 10px #f8fdea';
+            this.pauseButton.style.transform = 'scale(1.1)';
+        };
+
+        this.pauseButton.onmouseout = () => {
+            this.pauseButton.style.boxShadow = '0px 0px 20px #f8fdea';
+            this.pauseButton.style.transform = 'scale(1)';
+        };
+
+        this.pauseButton.onclick = () => this.togglePause();
+        document.body.appendChild(this.pauseButton);
+    }
+
+    createPauseScreen() {
+        this.pauseScreen = document.createElement('div');
+        this.pauseScreen.style.cssText = `
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            padding: 40px;
+            background: radial-gradient(circle, #f8fdea, #faeabd);
+            color: #a96161;
+            border-radius: 30px;
+            box-shadow: 0px 0px 30px #f8fdea;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        `;
+
+        const title = document.createElement('div');
+        title.textContent = 'Game Paused';
+        title.style.cssText = `
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        `;
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 20px;
+        `;
+
+        const resumeButton = this.createPauseScreenButton('Resume', () => this.togglePause());
+        const resetButton = this.createPauseScreenButton('Reset', () => location.reload());
+
+        buttonContainer.appendChild(resumeButton);
+        buttonContainer.appendChild(resetButton);
+        content.appendChild(title);
+        content.appendChild(buttonContainer);
+        this.pauseScreen.appendChild(content);
+        document.body.appendChild(this.pauseScreen);
+    }
+
+    createPauseScreenButton(text, onClick) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.style.cssText = `
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #947684;
+            background: radial-gradient(circle, #ffffff, #fce9b5);
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0px 0px 20px #f8fdea;
+            border: none;
+            transition: all 0.3s ease;
+        `;
+
+        button.onmouseover = () => {
+            button.style.boxShadow = '0px 0px 30px 10px #f8fdea';
+            button.style.transform = 'scale(1.1)';
+        };
+
+        button.onmouseout = () => {
+            button.style.boxShadow = '0px 0px 20px #f8fdea';
+            button.style.transform = 'scale(1)';
+        };
+
+        button.onclick = onClick;
+        return button;
     }
 
     createMessageDisplay() {
@@ -121,11 +246,35 @@ export class UIManager {
             this.retryButton.style.transform = 'scale(1)';
         };
 
-        this.retryButton.onclick = () => location.reload();
+        this.retryButton.onclick = () => {
+            if (this.onRestartCallback) {
+                this.onRestartCallback();
+            } else {
+                location.reload();
+            }
+        };
 
         content.appendChild(this.retryButton);
         this.endScreen.appendChild(content);
         document.body.appendChild(this.endScreen);
+    }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        this.pauseScreen.style.display = this.isPaused ? 'flex' : 'none';
+        this.pauseButton.textContent = this.isPaused ? '▶' : '❚❚';
+        
+        if (this.isPaused) {
+            if (this.onPauseCallback) this.onPauseCallback();
+        } else {
+            if (this.onResumeCallback) this.onResumeCallback();
+        }
+    }
+
+    setCallbacks({onPause, onResume, onRestart}) {
+        this.onPauseCallback = onPause;
+        this.onResumeCallback = onResume;
+        this.onRestartCallback = onRestart;
     }
 
     showMessage(text, isGood) {
@@ -155,8 +304,8 @@ export class UIManager {
             this.messageDisplay.style.opacity = '0';
             setTimeout(() => {
                 this.processMessageQueue();
-            }, 200); // Wait for fade out
-        }, 300); // Show message duration
+            }, 200);
+        }, 300);
     }
 
     updateScore(score) {
